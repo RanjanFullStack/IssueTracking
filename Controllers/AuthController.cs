@@ -5,6 +5,9 @@ using System.Security.Claims;
 using System.Text;
 using BCrypt.Net;
 using Microsoft.AspNetCore.Authorization;
+using IssueTracking.Models; // Assuming ApplicationDbContext is in this namespace
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace IssueTracking.Controllers
 {
@@ -13,10 +16,12 @@ namespace IssueTracking.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _context;
 
-        public AuthController(IConfiguration configuration)
+        public AuthController(IConfiguration configuration, ApplicationDbContext context)
         {
             _configuration = configuration;
+            _context = context;
         }
 
         /// <summary>
@@ -25,15 +30,27 @@ namespace IssueTracking.Controllers
         /// <param name="model">The user registration model.</param>
         /// <returns>A success message.</returns>
         [HttpPost("register")]
-        [Authorize(Policy = "AdminPolicy")]
-        public IActionResult Register([FromBody] UserRegistrationModel model)
+        public async Task<IActionResult> Register([FromBody] UserRegistrationModel model)
         {
+            // Check if any users exist in the database
+            bool isFirstUser = !_context.Users.Any();
+
             // Hash the password
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
 
-            // Save the user to the database (not implemented)
+            // Create the new user with role
+            var newUser = new User
+            {
+                Username = model.Username,
+                PasswordHash = hashedPassword,
+                Role = isFirstUser ? "Admin" : "User" // Assign Admin role to the first user
+            };
 
-            return Ok(new { Message = "User registered successfully" });
+            // Save the user to the database
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = isFirstUser ? "Admin user registered successfully" : "User registered successfully" });
         }
 
         /// <summary>
@@ -42,26 +59,31 @@ namespace IssueTracking.Controllers
         /// <param name="model">The user login model.</param>
         /// <returns>A JWT token.</returns>
         [HttpPost("login")]
-        public IActionResult Login([FromBody] UserLoginModel model)
+        public async Task<IActionResult> Login([FromBody] UserLoginModel model)
         {
-            // Verify the password (not implemented)
-            string storedHashedPassword = "storedHashedPasswordFromDatabase"; // Replace with actual database retrieval
-            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(model.Password, storedHashedPassword);
+            // Retrieve user from the database
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
+            if (user == null)
+            {
+                return Unauthorized(new { Message = "Invalid username or password" });
+            }
 
+            // Verify the password
+            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash);
             if (!isPasswordValid)
             {
                 return Unauthorized(new { Message = "Invalid username or password" });
             }
 
-            // Generate JWT token
+            // Generate JWT token with role
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Name, model.Username),
-                    new Claim(ClaimTypes.Role, "User") // Replace with actual role retrieval
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role)
                 }),
                 Expires = DateTime.UtcNow.AddHours(1),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
