@@ -46,7 +46,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
+// Add Controllers
+builder.Services.AddControllers();
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>
@@ -86,42 +87,27 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 
-app.UseSwagger();
-app.UseSwaggerUI();
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Enable Swagger middleware
 app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "IssueTracking API v1");
-        c.RoutePrefix = string.Empty; // Set Swagger UI as the homepage
-    });
+app.UseSwaggerUI();
+
 app.UseHttpsRedirection();
 
 // Use Authentication and Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapControllers();
 
 var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
-
-// app.MapGet("/weatherforecast", () =>
-// {
-//     var forecast =  Enumerable.Range(1, 5).Select(index =>
-//         new WeatherForecast(
-//             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-//             Random.Shared.Next(-20, 55),
-//             summaries[Random.Shared.Next(summaries.Length)]
-//         )
-//     ).ToArray();
-//     return forecast;
-// }).WithName("GetWeatherForecast");
 
 app.Run();
 
