@@ -6,13 +6,9 @@ The IssueTracking project is a comprehensive issue tracking system designed to h
 
 ## How to Create an Admin User
 
-To create an admin user, you can use the following command:
+## Setting Up the Username
 
-```sh
-dotnet user-jwts create --name "admin" --role "Admin"
-```
-
-This command will generate a JWT for the user "admin" with the role "Admin". The token can be used for authentication and authorization within the system.
+The first user created in the system will be the admin user. Ensure that you set the username correctly during the registration process. The admin user will have the role "Admin" and will have access to all administrative functionalities.
 
 ## Getting Started
 
