@@ -28,9 +28,12 @@ namespace IssueTracking.Models
                 .HasMany(i => i.Tags)
                 .WithMany(t => t.Issues)
                 .UsingEntity(j => j.ToTable("IssueTags"));
-        }
-		
-		public DbSet<FantasySquadResponse> FantasySquadResponses { get; set; }
 
+            // Composite key for FantasySquadResponse
+            modelBuilder.Entity<FantasySquadResponse>()
+                .HasKey(c => new { c.Date, c.ApiName });
+        }
+
+        public DbSet<FantasySquadResponse> FantasySquadResponses { get; set; }
     }
 }
