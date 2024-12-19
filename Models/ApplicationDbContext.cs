@@ -6,6 +6,9 @@ namespace IssueTracking.Models
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
+        // Parameterless constructor for Moq
+        public ApplicationDbContext() : base(new DbContextOptions<ApplicationDbContext>()) { }
+
         public DbSet<User> Users { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<Issue> Issues { get; set; }
@@ -26,5 +29,8 @@ namespace IssueTracking.Models
                 .WithMany(t => t.Issues)
                 .UsingEntity(j => j.ToTable("IssueTags"));
         }
+		
+		public DbSet<FantasySquadResponse> FantasySquadResponses { get; set; }
+
     }
 }
